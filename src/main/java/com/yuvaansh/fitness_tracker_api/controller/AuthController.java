@@ -5,9 +5,11 @@ import com.yuvaansh.fitness_tracker_api.dto.LoginRequest;
 import com.yuvaansh.fitness_tracker_api.dto.RegisterRequest;
 import com.yuvaansh.fitness_tracker_api.entity.User;
 import com.yuvaansh.fitness_tracker_api.repository.UserRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -29,6 +31,9 @@ public class AuthController {
      */
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
     
     /**
      * POST /api/auth/register
@@ -41,21 +46,11 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
         
-        // Step 1: Check if username already exists
-        if (userRepository.existsByUsername(request.getUsername())) {
-            // Username taken - return error
-            AuthResponse response = new AuthResponse(
-                "Username already exists", 
-                null, 
-                null
-            );
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        }
-        
-        // Step 2: Create a new User entity from the request
+        // Step 1: Create a new User entity from the request
+        // IMPORTANT: We hash the password before storing it in the DB.
         User newUser = new User(
             request.getUsername(),
-            request.getPassword(),  // TODO: Hash password before storing (we'll add this later)
+            passwordEncoder.encode(request.getPassword()),
             request.getSex(),
             request.getHeight(),
             request.getWeight(),
@@ -64,10 +59,26 @@ public class AuthController {
             request.getGoalWeightChangePerWeek()
         );
         
-        // Step 3: Save the user to database
-        User savedUser = userRepository.save(newUser);
+        // Step 2: Save the user to database
+        //
+        // Why no "existsByUsername" check as the source of truth?
+        // Because two concurrent requests can both pass an existence check and then race.
+        // The database unique constraint is the real enforcement mechanism.
+        //
+        // So we attempt the save and gracefully handle the unique-constraint failure.
+        User savedUser;
+        try {
+            savedUser = userRepository.save(newUser);
+        } catch (DataIntegrityViolationException ex) {
+            AuthResponse response = new AuthResponse(
+                    "Username already exists",
+                    null,
+                    null
+            );
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
         
-        // Step 4: Return success response
+        // Step 3: Return success response
         AuthResponse response = new AuthResponse(
             "User registered successfully",
             savedUser.getId(),
@@ -104,8 +115,8 @@ public class AuthController {
         User user = userOpt.get();
         
         // Step 4: Check password
-        // TODO: Compare hashed password (we'll add password hashing later)
-        if (!user.getPassword().equals(request.getPassword())) {
+        // We compare the plaintext password from the request against the hashed password in the DB.
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             // Password doesn't match
             AuthResponse response = new AuthResponse(
                 "Invalid username or password",
