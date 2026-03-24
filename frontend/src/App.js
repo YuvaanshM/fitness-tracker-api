@@ -22,6 +22,8 @@ function App() {
     password: '',
   });
 
+  const [token, setToken] = useState('');
+
   async function ping() {
     setStatus('Pinging backend...');
     try {
@@ -43,7 +45,13 @@ function App() {
         body: JSON.stringify(register),
       });
       const json = await res.json();
-      setStatus(`Register: ${res.status} ${json.message} (userId=${json.userId ?? 'n/a'})`);
+      if (res.ok && json.token) {
+        setToken(json.token);
+      }
+      setStatus(
+        `Register: ${res.status} ${json.message} (userId=${json.userId ?? 'n/a'})` +
+          (json.token ? ' — JWT saved' : '')
+      );
     } catch (err) {
       setStatus(`Register error: ${String(err)}`);
     }
@@ -59,9 +67,32 @@ function App() {
         body: JSON.stringify(login),
       });
       const json = await res.json();
-      setStatus(`Login: ${res.status} ${json.message} (userId=${json.userId ?? 'n/a'})`);
+      if (res.ok && json.token) {
+        setToken(json.token);
+      }
+      setStatus(
+        `Login: ${res.status} ${json.message} (userId=${json.userId ?? 'n/a'})` +
+          (json.token ? ' — JWT saved' : '')
+      );
     } catch (err) {
       setStatus(`Login error: ${String(err)}`);
+    }
+  }
+
+  async function fetchMe() {
+    if (!token) {
+      setStatus('No JWT yet — register or login first.');
+      return;
+    }
+    setStatus('Calling /api/user/me ...');
+    try {
+      const res = await fetch(`${apiBase}/api/user/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const text = await res.text();
+      setStatus(`Me: ${res.status} ${text}`);
+    } catch (err) {
+      setStatus(`Me error: ${String(err)}`);
     }
   }
 
@@ -71,11 +102,15 @@ function App() {
         <div style={{ maxWidth: 720, width: '100%', textAlign: 'left' }}>
           <h2 style={{ marginTop: 0 }}>Fitness Tracker API Test Page</h2>
           <p style={{ opacity: 0.9 }}>
-            This is a temporary landing page to verify the backend endpoints work.
+            This is a temporary landing page to verify the backend endpoints work. Password must be at least 8
+            characters (server validation).
           </p>
 
           <button onClick={ping} style={{ marginBottom: 12 }}>
             Ping backend (/api/health)
+          </button>
+          <button onClick={fetchMe} style={{ marginBottom: 12, marginLeft: 8 }}>
+            Call protected /api/user/me (uses JWT)
           </button>
 
           <div style={{ marginBottom: 16 }}>

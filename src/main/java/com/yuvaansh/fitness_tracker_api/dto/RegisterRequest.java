@@ -1,5 +1,13 @@
 package com.yuvaansh.fitness_tracker_api.dto;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+
 /**
  * RegisterRequest - Data Transfer Object for user registration
  * 
@@ -12,15 +20,41 @@ package com.yuvaansh.fitness_tracker_api.dto;
  * - Validation: We can add validation rules here
  */
 public class RegisterRequest {
-    
+
+    @NotBlank
+    @Size(min = 3, max = 50)
     private String username;
+
+    @NotBlank
+    @Size(min = 8, max = 128)
     private String password;
-    private String sex;  // "M" or "F"
-    private Double height;  // in cm
-    private Double weight;  // in lbs
-    private String activityLevel;  // "SEDENTARY", "LIGHTLY_ACTIVE", etc.
-    private String goal;  // "LOSE", "MAINTAIN", or "GAIN"
-    private Double goalWeightChangePerWeek;  // in lbs/week
+
+    @NotBlank
+    @Pattern(regexp = "^[MF]$", message = "must be M or F")
+    private String sex;
+
+    @NotNull
+    @Positive
+    @DecimalMax("300")
+    private Double height;
+
+    @NotNull
+    @Positive
+    @DecimalMax("1000")
+    private Double weight;
+
+    @NotBlank
+    @Size(max = 50)
+    private String activityLevel;
+
+    @NotBlank
+    @Size(max = 20)
+    private String goal;
+
+    @NotNull
+    @DecimalMin("-10.0")
+    @DecimalMax("10.0")
+    private Double goalWeightChangePerWeek;
     
     // Default constructor (needed for Spring to convert JSON to object)
     public RegisterRequest() {
