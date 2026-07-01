@@ -38,4 +38,6 @@ build/
 *.pem
 application-local.properties
 rule.md
+BackendPlan.md
+FrontendPlan.md
 

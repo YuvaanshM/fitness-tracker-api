@@ -1,6 +1,7 @@
 package com.yuvaansh.fitness_tracker_api.controller;
 
 import com.yuvaansh.fitness_tracker_api.dto.CreateMealRequest;
+import com.yuvaansh.fitness_tracker_api.dto.DailyNutritionSummaryResponse;
 import com.yuvaansh.fitness_tracker_api.dto.MealResponse;
 import com.yuvaansh.fitness_tracker_api.service.MealService;
 import jakarta.validation.Valid;
@@ -34,6 +35,14 @@ public class MealController {
             @Valid @RequestBody CreateMealRequest request) {
         MealResponse response = mealService.createMeal(principal, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<DailyNutritionSummaryResponse> getDailySummary(
+            Principal principal,
+            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        DailyNutritionSummaryResponse summary = mealService.getDailySummary(principal, date);
+        return ResponseEntity.ok(summary);
     }
 
     @GetMapping

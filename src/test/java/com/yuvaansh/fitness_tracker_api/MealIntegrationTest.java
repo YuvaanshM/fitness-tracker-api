@@ -63,6 +63,18 @@ class MealIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Chicken Bowl"))
                 .andExpect(jsonPath("$[0].mealDate").value("2026-06-28"));
+
+        mockMvc.perform(get("/api/meals/summary")
+                        .header("Authorization", "Bearer " + token)
+                        .param("date", "2026-06-28"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.date").value("2026-06-28"))
+                .andExpect(jsonPath("$.totalCalories").value(650))
+                .andExpect(jsonPath("$.totalProtein").value(45.0))
+                .andExpect(jsonPath("$.totalCarbs").value(55.0))
+                .andExpect(jsonPath("$.totalFats").value(20.0))
+                .andExpect(jsonPath("$.totalSugar").value(5.0))
+                .andExpect(jsonPath("$.totalFiber").value(8.0));
     }
 
     @Test
@@ -82,6 +94,32 @@ class MealIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mealJson))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getDailySummary_withoutToken_returnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/meals/summary")
+                        .param("date", "2026-06-28"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getDailySummary_withoutDate_returnsBadRequest() throws Exception {
+        String token = registerAndGetToken("missingdate_" + System.nanoTime());
+
+        mockMvc.perform(get("/api/meals/summary")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getDailySummary_withMalformedDate_returnsBadRequest() throws Exception {
+        String token = registerAndGetToken("baddate_" + System.nanoTime());
+
+        mockMvc.perform(get("/api/meals/summary")
+                        .header("Authorization", "Bearer " + token)
+                        .param("date", "06-28-2026"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -116,6 +154,72 @@ class MealIntegrationTest {
 
         JsonNode meals = objectMapper.readTree(result.getResponse().getContentAsString());
         assertThat(meals).isEmpty();
+
+        mockMvc.perform(get("/api/meals/summary")
+                        .header("Authorization", "Bearer " + bobToken)
+                        .param("date", "2026-06-28"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.date").value("2026-06-28"))
+                .andExpect(jsonPath("$.totalCalories").value(0))
+                .andExpect(jsonPath("$.totalProtein").value(0))
+                .andExpect(jsonPath("$.totalCarbs").value(0))
+                .andExpect(jsonPath("$.totalFats").value(0))
+                .andExpect(jsonPath("$.totalSugar").value(0))
+                .andExpect(jsonPath("$.totalFiber").value(0));
+    }
+
+    @Test
+    void dailySummary_sumsMealsForAuthenticatedUser() throws Exception {
+        String username = "summaryuser_" + System.nanoTime();
+        String token = registerAndGetToken(username);
+
+        String breakfastJson = """
+                {
+                  "name": "Breakfast",
+                  "mealDate": "2026-06-28",
+                  "calories": 500,
+                  "protein": 30.00,
+                  "carbs": 40.00,
+                  "fats": 15.00,
+                  "sugar": 8.00,
+                  "fiber": 6.00
+                }
+                """;
+        String lunchJson = """
+                {
+                  "name": "Lunch",
+                  "mealDate": "2026-06-28",
+                  "calories": 750,
+                  "protein": 60.00,
+                  "carbs": 80.00,
+                  "fats": 30.00,
+                  "sugar": 12.00,
+                  "fiber": 9.00
+                }
+                """;
+
+        mockMvc.perform(post("/api/meals")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(breakfastJson))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/meals")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(lunchJson))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/meals/summary")
+                        .header("Authorization", "Bearer " + token)
+                        .param("date", "2026-06-28"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.date").value("2026-06-28"))
+                .andExpect(jsonPath("$.totalCalories").value(1250))
+                .andExpect(jsonPath("$.totalProtein").value(90.0))
+                .andExpect(jsonPath("$.totalCarbs").value(120.0))
+                .andExpect(jsonPath("$.totalFats").value(45.0))
+                .andExpect(jsonPath("$.totalSugar").value(20.0))
+                .andExpect(jsonPath("$.totalFiber").value(15.0));
     }
 
     @Test

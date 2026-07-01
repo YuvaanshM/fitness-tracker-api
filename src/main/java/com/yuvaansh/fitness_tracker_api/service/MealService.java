@@ -1,14 +1,17 @@
 package com.yuvaansh.fitness_tracker_api.service;
 
 import com.yuvaansh.fitness_tracker_api.dto.CreateMealRequest;
+import com.yuvaansh.fitness_tracker_api.dto.DailyNutritionSummaryResponse;
 import com.yuvaansh.fitness_tracker_api.dto.MealResponse;
 import com.yuvaansh.fitness_tracker_api.entity.Meal;
 import com.yuvaansh.fitness_tracker_api.entity.User;
 import com.yuvaansh.fitness_tracker_api.exception.UserNotFoundException;
+import com.yuvaansh.fitness_tracker_api.repository.DailyNutritionSummaryProjection;
 import com.yuvaansh.fitness_tracker_api.repository.MealRepository;
 import com.yuvaansh.fitness_tracker_api.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.security.Principal;
 import java.time.LocalDate;
 import java.util.List;
@@ -55,6 +58,29 @@ public class MealService {
                 .stream()
                 .map(MealResponse::fromEntity)
                 .toList();
+    }
+
+    public DailyNutritionSummaryResponse getDailySummary(Principal principal, LocalDate date) {
+        User user = resolveUser(principal);
+        DailyNutritionSummaryProjection summary = mealRepository.summarizeByUserIdAndMealDate(user.getId(), date);
+
+        return new DailyNutritionSummaryResponse(
+                date,
+                nullToZero(summary == null ? null : summary.getTotalCalories()),
+                nullToZero(summary == null ? null : summary.getTotalProtein()),
+                nullToZero(summary == null ? null : summary.getTotalCarbs()),
+                nullToZero(summary == null ? null : summary.getTotalFats()),
+                nullToZero(summary == null ? null : summary.getTotalSugar()),
+                nullToZero(summary == null ? null : summary.getTotalFiber())
+        );
+    }
+
+    private Long nullToZero(Long value) {
+        return value == null ? 0L : value;
+    }
+
+    private BigDecimal nullToZero(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     private User resolveUser(Principal principal) {

@@ -1,6 +1,7 @@
 package com.yuvaansh.fitness_tracker_api.controller;
 
 import com.yuvaansh.fitness_tracker_api.dto.CreateMealRequest;
+import com.yuvaansh.fitness_tracker_api.dto.DailyNutritionSummaryResponse;
 import com.yuvaansh.fitness_tracker_api.dto.MealResponse;
 import com.yuvaansh.fitness_tracker_api.exception.GlobalExceptionHandler;
 import com.yuvaansh.fitness_tracker_api.service.MealService;
@@ -89,6 +90,24 @@ class MealControllerTest {
                 .andExpect(jsonPath("$[0].mealDate").value("2026-06-28"));
     }
 
+    @Test
+    void getDailySummary_returnsTotalsForDate() throws Exception {
+        when(mealService.getDailySummary(any(Principal.class), eq(LocalDate.of(2026, 6, 28))))
+                .thenReturn(buildSummaryResponse());
+
+        mockMvc.perform(get("/api/meals/summary")
+                        .principal(() -> "alice")
+                        .param("date", "2026-06-28"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.date").value("2026-06-28"))
+                .andExpect(jsonPath("$.totalCalories").value(1250))
+                .andExpect(jsonPath("$.totalProtein").value(90.0))
+                .andExpect(jsonPath("$.totalCarbs").value(120.0))
+                .andExpect(jsonPath("$.totalFats").value(45.0))
+                .andExpect(jsonPath("$.totalSugar").value(20.0))
+                .andExpect(jsonPath("$.totalFiber").value(15.0));
+    }
+
     private String validMealJson() {
         return """
                 {
@@ -114,5 +133,17 @@ class MealControllerTest {
         response.setCreatedAt(LocalDateTime.of(2026, 6, 28, 12, 0));
         response.setUpdatedAt(LocalDateTime.of(2026, 6, 28, 12, 0));
         return response;
+    }
+
+    private DailyNutritionSummaryResponse buildSummaryResponse() {
+        return new DailyNutritionSummaryResponse(
+                LocalDate.of(2026, 6, 28),
+                1250L,
+                new BigDecimal("90.00"),
+                new BigDecimal("120.00"),
+                new BigDecimal("45.00"),
+                new BigDecimal("20.00"),
+                new BigDecimal("15.00")
+        );
     }
 }

@@ -1,10 +1,12 @@
 package com.yuvaansh.fitness_tracker_api.service;
 
 import com.yuvaansh.fitness_tracker_api.dto.CreateMealRequest;
+import com.yuvaansh.fitness_tracker_api.dto.DailyNutritionSummaryResponse;
 import com.yuvaansh.fitness_tracker_api.dto.MealResponse;
 import com.yuvaansh.fitness_tracker_api.entity.Meal;
 import com.yuvaansh.fitness_tracker_api.entity.User;
 import com.yuvaansh.fitness_tracker_api.exception.UserNotFoundException;
+import com.yuvaansh.fitness_tracker_api.repository.DailyNutritionSummaryProjection;
 import com.yuvaansh.fitness_tracker_api.repository.MealRepository;
 import com.yuvaansh.fitness_tracker_api.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -92,17 +94,7 @@ class MealServiceTest {
 
     @Test
     void getMealsByDate_returnsOnlyAuthenticatedUserMeals() {
-        Meal meal = new Meal();
-        meal.setId(5L);
-        meal.setUser(user);
-        meal.setName("Chicken Bowl");
-        meal.setMealDate(mealDate);
-        meal.setCalories(650);
-        meal.setProtein(new BigDecimal("45.00"));
-        meal.setCarbs(new BigDecimal("55.00"));
-        meal.setFats(new BigDecimal("20.00"));
-        meal.setCreatedAt(LocalDateTime.now());
-        meal.setUpdatedAt(LocalDateTime.now());
+        Meal meal = buildMeal("Chicken Bowl", 650, "45.00", "55.00", "20.00", null, null);
 
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
         when(mealRepository.findByUserIdAndMealDateOrderByCreatedAtDesc(eq(1L), eq(mealDate)))
@@ -115,6 +107,65 @@ class MealServiceTest {
         assertThat(results.get(0).getMealDate()).isEqualTo(mealDate);
     }
 
+    @Test
+    void getDailySummary_sumsMealsForAuthenticatedUserAndDate() {
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(mealRepository.summarizeByUserIdAndMealDate(eq(1L), eq(mealDate)))
+                .thenReturn(summaryProjection(1250L, "90.00", "120.00", "45.00", "20.00", "15.00"));
+
+        DailyNutritionSummaryResponse summary = mealService.getDailySummary(principal, mealDate);
+
+        assertThat(summary.getDate()).isEqualTo(mealDate);
+        assertThat(summary.getTotalCalories()).isEqualTo(1250L);
+        assertThat(summary.getTotalProtein()).isEqualByComparingTo(new BigDecimal("90.00"));
+        assertThat(summary.getTotalCarbs()).isEqualByComparingTo(new BigDecimal("120.00"));
+        assertThat(summary.getTotalFats()).isEqualByComparingTo(new BigDecimal("45.00"));
+        assertThat(summary.getTotalSugar()).isEqualByComparingTo(new BigDecimal("20.00"));
+        assertThat(summary.getTotalFiber()).isEqualByComparingTo(new BigDecimal("15.00"));
+        verify(mealRepository).summarizeByUserIdAndMealDate(1L, mealDate);
+    }
+
+    @Test
+    void getDailySummary_treatsMissingOptionalNutritionAsZero() {
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(mealRepository.summarizeByUserIdAndMealDate(eq(1L), eq(mealDate)))
+                .thenReturn(summaryProjection(650L, "45.00", "55.00", "20.00", null, null));
+
+        DailyNutritionSummaryResponse summary = mealService.getDailySummary(principal, mealDate);
+
+        assertThat(summary.getTotalCalories()).isEqualTo(650L);
+        assertThat(summary.getTotalSugar()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(summary.getTotalFiber()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void getDailySummary_returnsZeroTotalsWhenNoMealsExist() {
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(mealRepository.summarizeByUserIdAndMealDate(eq(1L), eq(mealDate)))
+                .thenReturn(summaryProjection(null, null, null, null, null, null));
+
+        DailyNutritionSummaryResponse summary = mealService.getDailySummary(principal, mealDate);
+
+        assertThat(summary.getDate()).isEqualTo(mealDate);
+        assertThat(summary.getTotalCalories()).isZero();
+        assertThat(summary.getTotalProtein()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(summary.getTotalCarbs()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(summary.getTotalFats()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(summary.getTotalSugar()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(summary.getTotalFiber()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void getDailySummary_supportsCalorieTotalsLargerThanIntegerMaxValue() {
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(mealRepository.summarizeByUserIdAndMealDate(eq(1L), eq(mealDate)))
+                .thenReturn(summaryProjection(3_000_000_000L, "45.00", "55.00", "20.00", "0.00", "0.00"));
+
+        DailyNutritionSummaryResponse summary = mealService.getDailySummary(principal, mealDate);
+
+        assertThat(summary.getTotalCalories()).isEqualTo(3_000_000_000L);
+    }
+
     private CreateMealRequest buildRequest() {
         CreateMealRequest request = new CreateMealRequest();
         request.setName("Chicken Bowl");
@@ -124,5 +175,73 @@ class MealServiceTest {
         request.setCarbs(new BigDecimal("55.00"));
         request.setFats(new BigDecimal("20.00"));
         return request;
+    }
+
+    private Meal buildMeal(
+            String name,
+            Integer calories,
+            String protein,
+            String carbs,
+            String fats,
+            String sugar,
+            String fiber) {
+        Meal meal = new Meal();
+        meal.setId(5L);
+        meal.setUser(user);
+        meal.setName(name);
+        meal.setMealDate(mealDate);
+        meal.setCalories(calories);
+        meal.setProtein(new BigDecimal(protein));
+        meal.setCarbs(new BigDecimal(carbs));
+        meal.setFats(new BigDecimal(fats));
+        meal.setSugar(sugar == null ? null : new BigDecimal(sugar));
+        meal.setFiber(fiber == null ? null : new BigDecimal(fiber));
+        meal.setCreatedAt(LocalDateTime.now());
+        meal.setUpdatedAt(LocalDateTime.now());
+        return meal;
+    }
+
+    private DailyNutritionSummaryProjection summaryProjection(
+            Long totalCalories,
+            String totalProtein,
+            String totalCarbs,
+            String totalFats,
+            String totalSugar,
+            String totalFiber) {
+        return new DailyNutritionSummaryProjection() {
+            @Override
+            public Long getTotalCalories() {
+                return totalCalories;
+            }
+
+            @Override
+            public BigDecimal getTotalProtein() {
+                return toBigDecimal(totalProtein);
+            }
+
+            @Override
+            public BigDecimal getTotalCarbs() {
+                return toBigDecimal(totalCarbs);
+            }
+
+            @Override
+            public BigDecimal getTotalFats() {
+                return toBigDecimal(totalFats);
+            }
+
+            @Override
+            public BigDecimal getTotalSugar() {
+                return toBigDecimal(totalSugar);
+            }
+
+            @Override
+            public BigDecimal getTotalFiber() {
+                return toBigDecimal(totalFiber);
+            }
+        };
+    }
+
+    private BigDecimal toBigDecimal(String value) {
+        return value == null ? null : new BigDecimal(value);
     }
 }
