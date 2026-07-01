@@ -1,6 +1,7 @@
 package com.yuvaansh.fitness_tracker_api.exception;
 
 import com.yuvaansh.fitness_tracker_api.dto.AuthResponse;
+import com.yuvaansh.fitness_tracker_api.dto.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -29,6 +30,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<AuthResponse> userNotFound() {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new AuthResponse("User not found", null, null, null));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> resourceNotFound() {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse("Resource not found"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
