@@ -16,13 +16,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateUsernameException.class)
     public ResponseEntity<AuthResponse> duplicateUsername() {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new AuthResponse("Username already exists", null, null, null));
+                .body(new AuthResponse("Registration failed", null, null, null));
     }
 
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<AuthResponse> invalidCredentials() {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new AuthResponse("Invalid username or password", null, null, null));
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<AuthResponse> userNotFound() {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new AuthResponse("User not found", null, null, null));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
