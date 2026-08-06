@@ -1,6 +1,7 @@
 package com.yuvaansh.fitness_tracker_api.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -70,7 +71,15 @@ public class User {
      */
     @Column(nullable = false)
     private Double goalWeightChangePerWeek;  // in lbs/week
-    
+
+    /**
+     * Date of birth - used to derive age for the Mifflin-St Jeor BMR formula.
+     * Nullable at the DB level so Hibernate ddl-auto=update can add the column to
+     * tables that already have rows; the register DTO enforces it for new users.
+     */
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
     /**
      * Timestamp when the user account was created
      * @Column(name = "created_at") - maps to "created_at" column (snake_case is common in databases)
@@ -91,6 +100,16 @@ public class User {
      */
     public User(String username, String password, String sex, Double height, 
                 Double weight, String activityLevel, String goal, Double goalWeightChangePerWeek) {
+        this(username, password, sex, height, weight, activityLevel, goal, goalWeightChangePerWeek, null);
+    }
+
+    /**
+     * Constructor including date of birth, used by registration so BMR/TDEE can
+     * be computed from the user's age.
+     */
+    public User(String username, String password, String sex, Double height,
+                Double weight, String activityLevel, String goal, Double goalWeightChangePerWeek,
+                LocalDate dateOfBirth) {
         this.username = username;
         this.password = password;
         this.sex = sex;
@@ -99,6 +118,7 @@ public class User {
         this.activityLevel = activityLevel;
         this.goal = goal;
         this.goalWeightChangePerWeek = goalWeightChangePerWeek;
+        this.dateOfBirth = dateOfBirth;
         this.createdAt = LocalDateTime.now();  // Set creation time automatically
     }
     
@@ -175,7 +195,15 @@ public class User {
     public void setGoalWeightChangePerWeek(Double goalWeightChangePerWeek) {
         this.goalWeightChangePerWeek = goalWeightChangePerWeek;
     }
-    
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }

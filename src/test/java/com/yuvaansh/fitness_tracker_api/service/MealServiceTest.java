@@ -1,7 +1,9 @@
 package com.yuvaansh.fitness_tracker_api.service;
 
+import com.yuvaansh.fitness_tracker_api.dto.AddMealFromFoodRequest;
 import com.yuvaansh.fitness_tracker_api.dto.CreateMealRequest;
 import com.yuvaansh.fitness_tracker_api.dto.DailyNutritionSummaryResponse;
+import com.yuvaansh.fitness_tracker_api.dto.FoodDetailResponse;
 import com.yuvaansh.fitness_tracker_api.dto.MealResponse;
 import com.yuvaansh.fitness_tracker_api.entity.Meal;
 import com.yuvaansh.fitness_tracker_api.entity.User;
@@ -39,6 +41,9 @@ class MealServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private FoodService foodService;
 
     @Mock
     private Principal principal;
@@ -89,6 +94,76 @@ class MealServiceTest {
         when(userRepository.findByUsername("alice")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> mealService.createMeal(principal, buildRequest()))
+                .isInstanceOf(UserNotFoundException.class);
+    }
+
+    @Test
+    void createMealFromFood_scalesPer100gMacrosByServings() {
+        AddMealFromFoodRequest request = new AddMealFromFoodRequest();
+        request.setFdcId(173944L);
+        request.setServings(new BigDecimal("1.5")); // 150 g
+        request.setMealDate(mealDate);
+
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(foodService.getFood(173944L)).thenReturn(bananaPer100g());
+        when(mealRepository.save(any(Meal.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        mealService.createMealFromFood(principal, request);
+
+        ArgumentCaptor<Meal> captor = ArgumentCaptor.forClass(Meal.class);
+        verify(mealRepository).save(captor.capture());
+        Meal saved = captor.getValue();
+
+        assertThat(saved.getUser()).isEqualTo(user);
+        assertThat(saved.getName()).isEqualTo("Banana, raw");
+        assertThat(saved.getMealDate()).isEqualTo(mealDate);
+        // 89 kcal * 1.5 = 133.5 -> 134
+        assertThat(saved.getCalories()).isEqualTo(134);
+        assertThat(saved.getProtein()).isEqualByComparingTo(new BigDecimal("1.64"));  // 1.09 * 1.5 = 1.635
+        assertThat(saved.getCarbs()).isEqualByComparingTo(new BigDecimal("34.31"));   // 22.87 * 1.5 = 34.305
+        assertThat(saved.getFats()).isEqualByComparingTo(new BigDecimal("0.50"));     // 0.33 * 1.5 = 0.495
+    }
+
+    @Test
+    void createMealFromFood_usesNameOverrideAndDefaultsMissingRequiredMacros() {
+        AddMealFromFoodRequest request = new AddMealFromFoodRequest();
+        request.setFdcId(1L);
+        request.setServings(new BigDecimal("2"));
+        request.setMealDate(mealDate);
+        request.setName("My Snack");
+
+        FoodDetailResponse sparse = new FoodDetailResponse();
+        sparse.setDescription("Mystery Food");
+        sparse.setCalories(null);
+        // protein/carbs/fats intentionally null
+
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(foodService.getFood(1L)).thenReturn(sparse);
+        when(mealRepository.save(any(Meal.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        mealService.createMealFromFood(principal, request);
+
+        ArgumentCaptor<Meal> captor = ArgumentCaptor.forClass(Meal.class);
+        verify(mealRepository).save(captor.capture());
+        Meal saved = captor.getValue();
+
+        assertThat(saved.getName()).isEqualTo("My Snack");
+        assertThat(saved.getCalories()).isZero();
+        assertThat(saved.getProtein()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(saved.getCarbs()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(saved.getFats()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void createMealFromFood_throwsWhenUserNotFound() {
+        AddMealFromFoodRequest request = new AddMealFromFoodRequest();
+        request.setFdcId(1L);
+        request.setServings(BigDecimal.ONE);
+        request.setMealDate(mealDate);
+
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> mealService.createMealFromFood(principal, request))
                 .isInstanceOf(UserNotFoundException.class);
     }
 
@@ -164,6 +239,19 @@ class MealServiceTest {
         DailyNutritionSummaryResponse summary = mealService.getDailySummary(principal, mealDate);
 
         assertThat(summary.getTotalCalories()).isEqualTo(3_000_000_000L);
+    }
+
+    private FoodDetailResponse bananaPer100g() {
+        FoodDetailResponse food = new FoodDetailResponse();
+        food.setFdcId(173944L);
+        food.setDescription("Banana, raw");
+        food.setCalories(89);
+        food.setProtein(new BigDecimal("1.09"));
+        food.setCarbs(new BigDecimal("22.87"));
+        food.setFats(new BigDecimal("0.33"));
+        food.setSugar(new BigDecimal("12.23"));
+        food.setFiber(new BigDecimal("2.60"));
+        return food;
     }
 
     private CreateMealRequest buildRequest() {

@@ -1,7 +1,9 @@
 package com.yuvaansh.fitness_tracker_api.service;
 
+import com.yuvaansh.fitness_tracker_api.dto.AddMealFromFoodRequest;
 import com.yuvaansh.fitness_tracker_api.dto.CreateMealRequest;
 import com.yuvaansh.fitness_tracker_api.dto.DailyNutritionSummaryResponse;
+import com.yuvaansh.fitness_tracker_api.dto.FoodDetailResponse;
 import com.yuvaansh.fitness_tracker_api.dto.MealResponse;
 import com.yuvaansh.fitness_tracker_api.entity.Meal;
 import com.yuvaansh.fitness_tracker_api.entity.User;
@@ -10,8 +12,10 @@ import com.yuvaansh.fitness_tracker_api.repository.DailyNutritionSummaryProjecti
 import com.yuvaansh.fitness_tracker_api.repository.MealRepository;
 import com.yuvaansh.fitness_tracker_api.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.security.Principal;
 import java.time.LocalDate;
 import java.util.List;
@@ -21,10 +25,12 @@ public class MealService {
 
     private final MealRepository mealRepository;
     private final UserRepository userRepository;
+    private final FoodService foodService;
 
-    public MealService(MealRepository mealRepository, UserRepository userRepository) {
+    public MealService(MealRepository mealRepository, UserRepository userRepository, FoodService foodService) {
         this.mealRepository = mealRepository;
         this.userRepository = userRepository;
+        this.foodService = foodService;
     }
 
     public MealResponse createMeal(Principal principal, CreateMealRequest request) {
@@ -50,6 +56,66 @@ public class MealService {
 
         Meal saved = mealRepository.save(meal);
         return MealResponse.fromEntity(saved);
+    }
+
+    /**
+     * Logs a meal by fetching a USDA food's per-100 g macros and scaling them by
+     * {@code servings} (e.g. 1.5 = 150 g). Micronutrients are copied when present.
+     */
+    public MealResponse createMealFromFood(Principal principal, AddMealFromFoodRequest request) {
+        User user = resolveUser(principal);
+        FoodDetailResponse food = foodService.getFood(request.getFdcId());
+        BigDecimal servings = request.getServings();
+
+        Meal meal = new Meal();
+        meal.setUser(user);
+        meal.setName(resolveName(request.getName(), food.getDescription()));
+        meal.setMealDate(request.getMealDate());
+        meal.setCalories(scaleCalories(food.getCalories(), servings));
+        meal.setProtein(scaleRequired(food.getProtein(), servings));
+        meal.setCarbs(scaleRequired(food.getCarbs(), servings));
+        meal.setFats(scaleRequired(food.getFats(), servings));
+        meal.setSugar(scale(food.getSugar(), servings));
+        meal.setFiber(scale(food.getFiber(), servings));
+        meal.setSodiumMg(scale(food.getSodiumMg(), servings));
+        meal.setPotassiumMg(scale(food.getPotassiumMg(), servings));
+        meal.setCholesterolMg(scale(food.getCholesterolMg(), servings));
+        meal.setCalciumMg(scale(food.getCalciumMg(), servings));
+        meal.setIronMg(scale(food.getIronMg(), servings));
+        meal.setVitaminAMcg(scale(food.getVitaminAMcg(), servings));
+        meal.setVitaminCMg(scale(food.getVitaminCMg(), servings));
+        meal.setVitaminDMcg(scale(food.getVitaminDMcg(), servings));
+
+        Meal saved = mealRepository.save(meal);
+        return MealResponse.fromEntity(saved);
+    }
+
+    private String resolveName(String override, String foodDescription) {
+        if (StringUtils.hasText(override)) {
+            return override.trim();
+        }
+        String name = StringUtils.hasText(foodDescription) ? foodDescription.trim() : "Food";
+        return name.length() > 200 ? name.substring(0, 200) : name;
+    }
+
+    private Integer scaleCalories(Integer per100g, BigDecimal servings) {
+        if (per100g == null) {
+            return 0;
+        }
+        return BigDecimal.valueOf(per100g).multiply(servings).setScale(0, RoundingMode.HALF_UP).intValue();
+    }
+
+    private BigDecimal scale(BigDecimal per100g, BigDecimal servings) {
+        if (per100g == null) {
+            return null;
+        }
+        return per100g.multiply(servings).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    // For macros the Meal entity requires (protein/carbs/fats): default missing to zero.
+    private BigDecimal scaleRequired(BigDecimal per100g, BigDecimal servings) {
+        BigDecimal scaled = scale(per100g, servings);
+        return scaled == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP) : scaled;
     }
 
     public List<MealResponse> getMealsByDate(Principal principal, LocalDate date) {

@@ -79,6 +79,23 @@ class MealRepositoryTest {
         assertThat(summary.getTotalFiber()).isEqualByComparingTo(new BigDecimal("15.00"));
     }
 
+    @Test
+    void summarizeTrendByUserIdAndDateRange_groupsOnlyOwnMealsByDate() {
+        saveMeal(alice, "Breakfast", targetDate, 500, "30.00", "40.00", "15.00", "8.00", "6.00");
+        saveMeal(alice, "Lunch", targetDate, 750, "60.00", "80.00", "30.00", "12.00", "9.00");
+        saveMeal(alice, "Dinner", targetDate.plusDays(1), 1000, "70.00", "90.00", "40.00", "20.00", "10.00");
+        saveMeal(bob, "Breakfast", targetDate, 900, "80.00", "100.00", "50.00", "30.00", "11.00");
+
+        List<NutritionTrendProjection> trend = mealRepository.summarizeTrendByUserIdAndDateRange(
+                alice.getId(), targetDate, targetDate.plusDays(1));
+
+        assertThat(trend).hasSize(2);
+        assertThat(trend.get(0).getDate()).isEqualTo(targetDate);
+        assertThat(trend.get(0).getCalories()).isEqualTo(1250L);
+        assertThat(trend.get(1).getDate()).isEqualTo(targetDate.plusDays(1));
+        assertThat(trend.get(1).getCalories()).isEqualTo(1000L);
+    }
+
     private Meal saveMeal(User user, String name, LocalDate mealDate) {
         return saveMeal(user, name, mealDate, 500, "30.00", "40.00", "15.00", null, null);
     }

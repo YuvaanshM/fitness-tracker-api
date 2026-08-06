@@ -4,9 +4,12 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+
+import java.time.LocalDate;
 
 /**
  * RegisterRequest - Data Transfer Object for user registration
@@ -55,6 +58,10 @@ public class RegisterRequest {
     @DecimalMin("-10.0")
     @DecimalMax("10.0")
     private Double goalWeightChangePerWeek;
+
+    @NotNull
+    @Past
+    private LocalDate dateOfBirth;
     
     // Default constructor (needed for Spring to convert JSON to object)
     public RegisterRequest() {
@@ -62,7 +69,8 @@ public class RegisterRequest {
     
     // Constructor with all fields
     public RegisterRequest(String username, String password, String sex, Double height,
-                          Double weight, String activityLevel, String goal, Double goalWeightChangePerWeek) {
+                          Double weight, String activityLevel, String goal, Double goalWeightChangePerWeek,
+                          LocalDate dateOfBirth) {
         this.username = username;
         this.password = password;
         this.sex = sex;
@@ -71,6 +79,7 @@ public class RegisterRequest {
         this.activityLevel = activityLevel;
         this.goal = goal;
         this.goalWeightChangePerWeek = goalWeightChangePerWeek;
+        this.dateOfBirth = dateOfBirth;
     }
     
     // Getters and Setters (Spring needs these to convert JSON)
@@ -136,5 +145,13 @@ public class RegisterRequest {
     
     public void setGoalWeightChangePerWeek(Double goalWeightChangePerWeek) {
         this.goalWeightChangePerWeek = goalWeightChangePerWeek;
+    }
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
     }
 }

@@ -1,5 +1,6 @@
 package com.yuvaansh.fitness_tracker_api.controller;
 
+import com.yuvaansh.fitness_tracker_api.dto.AddMealFromFoodRequest;
 import com.yuvaansh.fitness_tracker_api.dto.CreateMealRequest;
 import com.yuvaansh.fitness_tracker_api.dto.DailyNutritionSummaryResponse;
 import com.yuvaansh.fitness_tracker_api.dto.MealResponse;
@@ -73,6 +74,31 @@ class MealControllerTest {
                         .principal(() -> "alice")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    void createMealFromFood_returnsCreated() throws Exception {
+        when(mealService.createMealFromFood(any(Principal.class), any(AddMealFromFoodRequest.class)))
+                .thenReturn(buildResponse());
+
+        mockMvc.perform(post("/api/meals/from-food")
+                        .principal(() -> "alice")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fdcId": 173944, "servings": 1.5, "mealDate": "2026-06-28"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name").value("Chicken Bowl"));
+    }
+
+    @Test
+    void createMealFromFood_withInvalidBody_returnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/meals/from-food")
+                        .principal(() -> "alice")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"servings\": -1}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").exists());
     }

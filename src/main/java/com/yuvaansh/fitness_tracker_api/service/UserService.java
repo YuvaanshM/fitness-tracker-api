@@ -34,7 +34,8 @@ public class UserService {
                 request.getWeight(),
                 request.getActivityLevel(),
                 request.getGoal(),
-                request.getGoalWeightChangePerWeek()
+                request.getGoalWeightChangePerWeek(),
+                request.getDateOfBirth()
         );
 
         try {

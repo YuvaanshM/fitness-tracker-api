@@ -2,6 +2,8 @@ package com.yuvaansh.fitness_tracker_api.dto;
 
 import com.yuvaansh.fitness_tracker_api.entity.User;
 
+import java.time.LocalDate;
+
 /**
  * Safe subset of user fields for authenticated clients (no password).
  */
@@ -15,6 +17,7 @@ public class UserProfileResponse {
     private String activityLevel;
     private String goal;
     private Double goalWeightChangePerWeek;
+    private LocalDate dateOfBirth;
 
     public UserProfileResponse() {
     }
@@ -29,6 +32,7 @@ public class UserProfileResponse {
         r.setActivityLevel(user.getActivityLevel());
         r.setGoal(user.getGoal());
         r.setGoalWeightChangePerWeek(user.getGoalWeightChangePerWeek());
+        r.setDateOfBirth(user.getDateOfBirth());
         return r;
     }
 
@@ -94,5 +98,13 @@ public class UserProfileResponse {
 
     public void setGoalWeightChangePerWeek(Double goalWeightChangePerWeek) {
         this.goalWeightChangePerWeek = goalWeightChangePerWeek;
+    }
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
     }
 }

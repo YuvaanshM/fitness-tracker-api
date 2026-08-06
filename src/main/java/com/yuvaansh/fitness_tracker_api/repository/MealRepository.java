@@ -29,4 +29,22 @@ public interface MealRepository extends JpaRepository<Meal, Long> {
     DailyNutritionSummaryProjection summarizeByUserIdAndMealDate(
             @Param("userId") Long userId,
             @Param("mealDate") LocalDate mealDate);
+
+    @Query("""
+            SELECT
+                m.mealDate AS date,
+                SUM(m.calories) AS calories,
+                SUM(m.protein) AS protein,
+                SUM(m.carbs) AS carbs,
+                SUM(m.fats) AS fats
+            FROM Meal m
+            WHERE m.user.id = :userId
+              AND m.mealDate BETWEEN :from AND :to
+            GROUP BY m.mealDate
+            ORDER BY m.mealDate ASC
+            """)
+    List<NutritionTrendProjection> summarizeTrendByUserIdAndDateRange(
+            @Param("userId") Long userId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
 }

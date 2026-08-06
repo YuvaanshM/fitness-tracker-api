@@ -2,7 +2,6 @@ package com.yuvaansh.fitness_tracker_api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yuvaansh.fitness_tracker_api.dto.RegisterRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -196,13 +195,23 @@ class WorkoutIntegrationTest {
     }
 
     private String registerAndGetToken(String username) throws Exception {
-        RegisterRequest request = new RegisterRequest(
-                username, "password123", "M", 180.0, 170.0,
-                "MODERATELY_ACTIVE", "MAINTAIN", 0.0);
+        String registerJson = """
+                {
+                  "username": "%s",
+                  "password": "password123",
+                  "sex": "M",
+                  "height": 180.0,
+                  "weight": 170.0,
+                  "activityLevel": "MODERATELY_ACTIVE",
+                  "goal": "MAINTAIN",
+                  "goalWeightChangePerWeek": 0.0,
+                  "dateOfBirth": "1996-05-15"
+                }
+                """.formatted(username);
 
         MvcResult result = mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(registerJson))
                 .andExpect(status().isCreated())
                 .andReturn();
 

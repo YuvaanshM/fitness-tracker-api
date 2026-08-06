@@ -1,5 +1,6 @@
 package com.yuvaansh.fitness_tracker_api.controller;
 
+import com.yuvaansh.fitness_tracker_api.dto.AddMealFromFoodRequest;
 import com.yuvaansh.fitness_tracker_api.dto.CreateMealRequest;
 import com.yuvaansh.fitness_tracker_api.dto.DailyNutritionSummaryResponse;
 import com.yuvaansh.fitness_tracker_api.dto.MealResponse;
@@ -34,6 +35,14 @@ public class MealController {
             Principal principal,
             @Valid @RequestBody CreateMealRequest request) {
         MealResponse response = mealService.createMeal(principal, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/from-food")
+    public ResponseEntity<MealResponse> createMealFromFood(
+            Principal principal,
+            @Valid @RequestBody AddMealFromFoodRequest request) {
+        MealResponse response = mealService.createMealFromFood(principal, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
