@@ -26,6 +26,14 @@ public class Meal {
     @Column(name = "meal_date", nullable = false)
     private LocalDate mealDate;
 
+    /**
+     * Nullable at the DB level so Hibernate ddl-auto=update can add the column to
+     * tables that already have rows; the create-meal DTOs enforce it for new meals.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", length = 20)
+    private MealCategory category;
+
     @Column(nullable = false)
     private Integer calories;
 
@@ -119,6 +127,14 @@ public class Meal {
 
     public void setMealDate(LocalDate mealDate) {
         this.mealDate = mealDate;
+    }
+
+    public MealCategory getCategory() {
+        return category;
+    }
+
+    public void setCategory(MealCategory category) {
+        this.category = category;
     }
 
     public Integer getCalories() {

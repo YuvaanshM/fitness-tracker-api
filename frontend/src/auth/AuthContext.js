@@ -55,6 +55,12 @@ export function AuthProvider({ children }) {
     [establishSession]
   );
 
+  const refreshUser = useCallback(async () => {
+    const profile = await getCurrentUser();
+    setUser(profile);
+    return profile;
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_STORAGE_KEY);
 
@@ -113,8 +119,9 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
+      refreshUser,
     }),
-    [isLoading, login, logout, register, user]
+    [isLoading, login, logout, refreshUser, register, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

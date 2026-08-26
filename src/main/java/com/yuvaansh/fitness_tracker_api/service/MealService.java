@@ -39,6 +39,7 @@ public class MealService {
         meal.setUser(user);
         meal.setName(request.getName().trim());
         meal.setMealDate(request.getMealDate());
+        meal.setCategory(request.getCategory());
         meal.setCalories(request.getCalories());
         meal.setProtein(request.getProtein());
         meal.setCarbs(request.getCarbs());
@@ -71,6 +72,7 @@ public class MealService {
         meal.setUser(user);
         meal.setName(resolveName(request.getName(), food.getDescription()));
         meal.setMealDate(request.getMealDate());
+        meal.setCategory(request.getCategory());
         meal.setCalories(scaleCalories(food.getCalories(), servings));
         meal.setProtein(scaleRequired(food.getProtein(), servings));
         meal.setCarbs(scaleRequired(food.getCarbs(), servings));

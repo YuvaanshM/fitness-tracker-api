@@ -6,6 +6,7 @@ import com.yuvaansh.fitness_tracker_api.dto.DailyNutritionSummaryResponse;
 import com.yuvaansh.fitness_tracker_api.dto.FoodDetailResponse;
 import com.yuvaansh.fitness_tracker_api.dto.MealResponse;
 import com.yuvaansh.fitness_tracker_api.entity.Meal;
+import com.yuvaansh.fitness_tracker_api.entity.MealCategory;
 import com.yuvaansh.fitness_tracker_api.entity.User;
 import com.yuvaansh.fitness_tracker_api.exception.UserNotFoundException;
 import com.yuvaansh.fitness_tracker_api.repository.DailyNutritionSummaryProjection;
@@ -103,6 +104,7 @@ class MealServiceTest {
         request.setFdcId(173944L);
         request.setServings(new BigDecimal("1.5")); // 150 g
         request.setMealDate(mealDate);
+        request.setCategory(MealCategory.LUNCH);
 
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
         when(foodService.getFood(173944L)).thenReturn(bananaPer100g());
@@ -130,6 +132,7 @@ class MealServiceTest {
         request.setFdcId(1L);
         request.setServings(new BigDecimal("2"));
         request.setMealDate(mealDate);
+        request.setCategory(MealCategory.SNACK);
         request.setName("My Snack");
 
         FoodDetailResponse sparse = new FoodDetailResponse();
@@ -160,6 +163,7 @@ class MealServiceTest {
         request.setFdcId(1L);
         request.setServings(BigDecimal.ONE);
         request.setMealDate(mealDate);
+        request.setCategory(MealCategory.SNACK);
 
         when(userRepository.findByUsername("alice")).thenReturn(Optional.empty());
 
@@ -258,6 +262,7 @@ class MealServiceTest {
         CreateMealRequest request = new CreateMealRequest();
         request.setName("Chicken Bowl");
         request.setMealDate(mealDate);
+        request.setCategory(MealCategory.LUNCH);
         request.setCalories(650);
         request.setProtein(new BigDecimal("45.00"));
         request.setCarbs(new BigDecimal("55.00"));

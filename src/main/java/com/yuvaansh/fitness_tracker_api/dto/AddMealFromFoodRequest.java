@@ -1,5 +1,6 @@
 package com.yuvaansh.fitness_tracker_api.dto;
 
+import com.yuvaansh.fitness_tracker_api.entity.MealCategory;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
@@ -24,6 +25,9 @@ public class AddMealFromFoodRequest {
 
     @NotNull
     private LocalDate mealDate;
+
+    @NotNull
+    private MealCategory category;
 
     @Size(max = 200)
     private String name;
@@ -53,6 +57,14 @@ public class AddMealFromFoodRequest {
 
     public void setMealDate(LocalDate mealDate) {
         this.mealDate = mealDate;
+    }
+
+    public MealCategory getCategory() {
+        return category;
+    }
+
+    public void setCategory(MealCategory category) {
+        this.category = category;
     }
 
     public String getName() {

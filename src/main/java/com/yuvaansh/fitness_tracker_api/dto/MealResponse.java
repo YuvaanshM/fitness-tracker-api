@@ -1,6 +1,7 @@
 package com.yuvaansh.fitness_tracker_api.dto;
 
 import com.yuvaansh.fitness_tracker_api.entity.Meal;
+import com.yuvaansh.fitness_tracker_api.entity.MealCategory;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -11,6 +12,7 @@ public class MealResponse {
     private Long id;
     private String name;
     private LocalDate mealDate;
+    private MealCategory category;
     private Integer calories;
     private BigDecimal protein;
     private BigDecimal carbs;
@@ -36,6 +38,7 @@ public class MealResponse {
         response.setId(meal.getId());
         response.setName(meal.getName());
         response.setMealDate(meal.getMealDate());
+        response.setCategory(meal.getCategory());
         response.setCalories(meal.getCalories());
         response.setProtein(meal.getProtein());
         response.setCarbs(meal.getCarbs());
@@ -77,6 +80,14 @@ public class MealResponse {
 
     public void setMealDate(LocalDate mealDate) {
         this.mealDate = mealDate;
+    }
+
+    public MealCategory getCategory() {
+        return category;
+    }
+
+    public void setCategory(MealCategory category) {
+        this.category = category;
     }
 
     public Integer getCalories() {

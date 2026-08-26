@@ -6,11 +6,14 @@ import ProtectedRoute from './auth/ProtectedRoute';
 import Layout from './components/Layout';
 import RouteAccessibility from './components/RouteAccessibility';
 import queryClient from './lib/queryClient';
-import ComingSoon from './pages/ComingSoon';
 import Dashboard from './pages/Dashboard';
+import Food from './pages/Food';
 import Home from './pages/Home';
+import Insights from './pages/Insights';
 import Login from './pages/Login';
+import Profile from './pages/Profile';
 import Register from './pages/Register';
+import Workouts from './pages/Workouts';
 
 export default function App() {
   return (
@@ -28,10 +31,10 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/workouts" element={<ComingSoon page="workouts" />} />
-                <Route path="/food" element={<ComingSoon page="food" />} />
-                <Route path="/insights" element={<ComingSoon page="insights" />} />
-                <Route path="/profile" element={<ComingSoon page="profile" />} />
+                <Route path="/workouts" element={<Workouts />} />
+                <Route path="/food" element={<Food />} />
+                <Route path="/insights" element={<Insights />} />
+                <Route path="/profile" element={<Profile />} />
               </Route>
             </Route>
 

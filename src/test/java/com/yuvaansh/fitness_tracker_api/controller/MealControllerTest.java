@@ -87,7 +87,7 @@ class MealControllerTest {
                         .principal(() -> "alice")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"fdcId": 173944, "servings": 1.5, "mealDate": "2026-06-28"}
+                                {"fdcId": 173944, "servings": 1.5, "mealDate": "2026-06-28", "category": "LUNCH"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Chicken Bowl"));
@@ -139,6 +139,7 @@ class MealControllerTest {
                 {
                   "name": "Chicken Bowl",
                   "mealDate": "2026-06-28",
+                  "category": "LUNCH",
                   "calories": 650,
                   "protein": 45.00,
                   "carbs": 55.00,
