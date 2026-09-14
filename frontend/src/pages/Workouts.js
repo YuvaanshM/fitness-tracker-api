@@ -1,10 +1,45 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
+import { getWorkoutSuggestion } from '../api/ai';
 import { getApiErrorMessage } from '../api/client';
 import { getRoutines } from '../api/routines';
 import { finishWorkout, getWorkouts, logSet, startWorkout } from '../api/workouts';
 import { useAuth } from '../auth/AuthContext';
 import RestTimer from '../components/RestTimer';
+
+function AiWorkoutSuggestion() {
+  const suggestionMutation = useMutation({ mutationFn: getWorkoutSuggestion });
+
+  return (
+    <div className="mt-6 rounded-3xl border border-brand-200 bg-brand-50 p-6 shadow-card sm:p-8">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-700/70">Powered by Gemini</p>
+          <h2 className="mt-2 text-2xl font-black">Suggest my next workout</h2>
+        </div>
+        <button
+          type="button"
+          className="button-primary"
+          onClick={() => suggestionMutation.mutate()}
+          disabled={suggestionMutation.isPending}
+          aria-busy={suggestionMutation.isPending}
+        >
+          {suggestionMutation.isPending ? 'Thinking…' : 'Suggest next workout'}
+        </button>
+      </div>
+
+      {suggestionMutation.isError && (
+        <div className="error-banner mt-6" role="alert">
+          {getApiErrorMessage(suggestionMutation.error, 'We could not generate a suggestion right now.')}
+        </div>
+      )}
+
+      {suggestionMutation.data?.content && (
+        <p className="mt-6 whitespace-pre-line text-sm text-black/70">{suggestionMutation.data.content}</p>
+      )}
+    </div>
+  );
+}
 
 function toIsoDate(date) {
   return date.toISOString().slice(0, 10);
@@ -378,6 +413,7 @@ export default function Workouts() {
             isStarting={startMutation.isPending}
           />
         )}
+        {!session && <AiWorkoutSuggestion />}
       </section>
 
       <section className="mt-10">

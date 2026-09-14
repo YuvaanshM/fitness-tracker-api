@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { parseMeal as parseMealWithAi } from '../api/ai';
 import { getApiErrorMessage } from '../api/client';
 import { searchFoods } from '../api/foods';
 import { createMeal, createMealFromFood, getMealsByDate } from '../api/meals';
@@ -148,13 +149,21 @@ function FoodSearch({ mealDate, onLogged }) {
   );
 }
 
-function ManualMealForm({ mealDate, onLogged }) {
-  const [form, setForm] = useState({ name: '', category: 'LUNCH', calories: '', protein: '', carbs: '', fats: '' });
+const EMPTY_MEAL_FORM = { name: '', category: 'LUNCH', calories: '', protein: '', carbs: '', fats: '', fiber: '' };
+
+function ManualMealForm({ mealDate, onLogged, prefill }) {
+  const [form, setForm] = useState(EMPTY_MEAL_FORM);
+
+  useEffect(() => {
+    if (prefill) {
+      setForm((current) => ({ ...current, ...prefill }));
+    }
+  }, [prefill]);
 
   const createMealMutation = useMutation({
     mutationFn: createMeal,
     onSuccess: () => {
-      setForm({ name: '', category: 'LUNCH', calories: '', protein: '', carbs: '', fats: '' });
+      setForm(EMPTY_MEAL_FORM);
       onLogged();
     },
   });
@@ -169,6 +178,7 @@ function ManualMealForm({ mealDate, onLogged }) {
       protein: Number(form.protein),
       carbs: Number(form.carbs),
       fats: Number(form.fats),
+      fiber: form.fiber === '' ? undefined : Number(form.fiber),
     });
   }
 
@@ -206,7 +216,7 @@ function ManualMealForm({ mealDate, onLogged }) {
             <input id="meal-calories" className="field-input" type="number" min="0" required value={form.calories} onChange={update('calories')} />
           </div>
         </div>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-4">
           <div>
             <label className="field-label" htmlFor="meal-protein">Protein (g)</label>
             <input id="meal-protein" className="field-input" type="number" min="0" step="0.1" required value={form.protein} onChange={update('protein')} />
@@ -219,11 +229,77 @@ function ManualMealForm({ mealDate, onLogged }) {
             <label className="field-label" htmlFor="meal-fats">Fats (g)</label>
             <input id="meal-fats" className="field-input" type="number" min="0" step="0.1" required value={form.fats} onChange={update('fats')} />
           </div>
+          <div>
+            <label className="field-label" htmlFor="meal-fiber">Fiber (g)</label>
+            <input id="meal-fiber" className="field-input" type="number" min="0" step="0.1" value={form.fiber} onChange={update('fiber')} />
+          </div>
         </div>
         <button className="button-primary" type="submit" disabled={createMealMutation.isPending}>
           {createMealMutation.isPending ? 'Logging…' : 'Log meal'}
         </button>
       </form>
+    </div>
+  );
+}
+
+function AiMealAssistant({ onParsed }) {
+  const [text, setText] = useState('');
+
+  const parseMutation = useMutation({
+    mutationFn: parseMealWithAi,
+    onSuccess: (parsed) => {
+      onParsed({
+        name: parsed.name ?? '',
+        calories: parsed.calories ?? '',
+        protein: parsed.protein ?? '',
+        carbs: parsed.carbs ?? '',
+        fats: parsed.fats ?? '',
+        fiber: parsed.fiber ?? '',
+      });
+    },
+  });
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    if (!text.trim()) return;
+    parseMutation.mutate(text.trim());
+  }
+
+  return (
+    <div className="rounded-3xl border border-brand-200 bg-brand-50 p-6 shadow-card sm:p-8">
+      <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-700/70">Powered by Gemini</p>
+      <h2 className="mt-2 text-2xl font-black">AI Meal Assistant</h2>
+      <p className="mt-2 text-sm text-black/60">
+        Describe what you ate in plain language and we'll estimate the nutrition for you to review.
+      </p>
+
+      {parseMutation.isError && (
+        <div className="error-banner mt-4" role="alert">
+          {getApiErrorMessage(parseMutation.error, 'We could not parse that meal.')}
+        </div>
+      )}
+
+      <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+        <div>
+          <label className="field-label sr-only" htmlFor="ai-meal-text">Describe your meal</label>
+          <textarea
+            id="ai-meal-text"
+            className="field-input min-h-24"
+            placeholder="e.g. Had a chipotle bowl with double chicken, brown rice, black beans, and guacamole"
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+          />
+        </div>
+        <button className="button-primary" type="submit" disabled={parseMutation.isPending || !text.trim()}>
+          {parseMutation.isPending ? 'Analyzing…' : 'Parse meal with AI'}
+        </button>
+      </form>
+
+      {parseMutation.isSuccess && (
+        <p className="mt-4 text-sm font-semibold text-brand-700">
+          Estimate ready — review and confirm it below in "Log a meal directly".
+        </p>
+      )}
     </div>
   );
 }
@@ -268,6 +344,7 @@ function MacroChart({ meals }) {
 export default function Food() {
   const { user } = useAuth();
   const [mealDate, setMealDate] = useState(toIsoDate(new Date()));
+  const [mealPrefill, setMealPrefill] = useState(null);
   const queryClient = useQueryClient();
 
   const mealsQuery = useQuery({
@@ -310,9 +387,13 @@ export default function Food() {
         </div>
       </div>
 
-      <section className="mt-8 grid gap-6 lg:grid-cols-2">
+      <section className="mt-8">
+        <AiMealAssistant onParsed={setMealPrefill} />
+      </section>
+
+      <section className="mt-6 grid gap-6 lg:grid-cols-2">
         <FoodSearch mealDate={mealDate} onLogged={refreshMeals} />
-        <ManualMealForm mealDate={mealDate} onLogged={refreshMeals} />
+        <ManualMealForm mealDate={mealDate} onLogged={refreshMeals} prefill={mealPrefill} />
       </section>
 
       <section className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_0.6fr]">

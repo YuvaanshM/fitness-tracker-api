@@ -13,6 +13,12 @@ services:
       context: .
     ports:
       - 8080:8080
+    env_file:
+      - .env
+    environment:
+      # Postgres runs on the host machine (e.g. via Homebrew), not in this
+      # container, so "localhost" here must resolve to the host instead.
+      - DB_URL=jdbc:postgresql://host.docker.internal:5432/fitness_tracker
 
 # The commented out section below is an example of how to define a PostgreSQL
 # database that your application can use. `depends_on` tells Docker Compose to

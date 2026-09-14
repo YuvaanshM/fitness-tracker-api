@@ -1,11 +1,64 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { getNutritionInsights } from '../api/ai';
+import { getApiErrorMessage } from '../api/client';
 import { getDailySummary } from '../api/meals';
 import { getNutritionTrend } from '../api/progress';
 import { getMetrics } from '../api/user';
 import { getWorkouts } from '../api/workouts';
 import { useAuth } from '../auth/AuthContext';
+
+function AiNutritionCoach() {
+  const insightsMutation = useMutation({ mutationFn: getNutritionInsights });
+
+  return (
+    <article className="rounded-3xl border border-brand-200 bg-brand-50 p-6 shadow-card sm:p-8">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-700/70">Powered by Gemini</p>
+          <h2 className="mt-2 text-2xl font-black">AI Nutrition Coach</h2>
+        </div>
+        <button
+          type="button"
+          className="button-primary"
+          onClick={() => insightsMutation.mutate()}
+          disabled={insightsMutation.isPending}
+          aria-busy={insightsMutation.isPending}
+        >
+          {insightsMutation.isPending ? 'Thinking…' : 'Generate weekly insights'}
+        </button>
+      </div>
+
+      {insightsMutation.isError && (
+        <div className="error-banner mt-6" role="alert">
+          {getApiErrorMessage(insightsMutation.error, 'We could not generate insights right now.')}
+        </div>
+      )}
+
+      {insightsMutation.data?.content ? (
+        <ul className="mt-6 space-y-2 text-sm text-black/70">
+          {insightsMutation.data.content
+            .split('\n')
+            .map((line) => line.replace(/^[-*•]\s*/, '').trim())
+            .filter(Boolean)
+            .map((line, index) => (
+              <li key={index} className="flex gap-2">
+                <span className="mt-1 h-1.5 w-1.5 flex-none rounded-full bg-brand-700" />
+                <span>{line}</span>
+              </li>
+            ))}
+        </ul>
+      ) : (
+        !insightsMutation.isPending && (
+          <p className="mt-6 text-sm text-black/55">
+            Generate insights based on your last 7 days of meals and your targets.
+          </p>
+        )
+      )}
+    </article>
+  );
+}
 
 function MetricCard({ label, value, unit, tone = 'light' }) {
   const tones = {
@@ -211,6 +264,10 @@ export default function Dashboard() {
             </div>
           </dl>
         </article>
+      </section>
+
+      <section className="mt-8">
+        <AiNutritionCoach />
       </section>
     </div>
   );
